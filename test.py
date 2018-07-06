@@ -2,44 +2,56 @@ from fbchat import log, Client
 from fbchat.models import *
 import sys
 
-try:
-    file = open("credentials.txt",'r')
-    x = file.read().split("\n")
-    email = x[0]
-    passs = x[1]
-    client = Client(str(email), str(passs))
+def login(email,password):
+    return Client(email,password)
 
-ids = {}
-for e in client.fetchAllUsers():
-    ids[str(e.name)] = str(e.uid)
+def inputCredentials():
+    email = str(input("Email \n"))
+    password = str(input("Password \n"))
+    return email,password
 
-name = sys.argv[1]
-curid = int(ids[name])
-
-words = {}
-text = ""
-for e in client.fetchThreadMessages(curid,limit=10000):
-    try:
-        text += e.text
-        text += '\n'
-	#	author = e.author
-        curwords = e.text.split(" ")
-        lowerwords = [x.lower() for x in curwords]
-        for f in lowerwords:
-            if f in words:
-                words[f] = words[f]+1
-            else:
-                words[f] = 1
-    except:
-        p = 1
+def logout(client):
+    client.logout()
     
-temp = []
-for e in words:
-    temp.append((words[e],e))
+def idList(client):
+    ids = {}
+    for e in client.fetchAllUsers():
+        ids[str(e.name)] = str(e.uid)
+    return ids
 
-temp = sorted(temp)[::-1]
+def mostCommonWords(messengerID):
+    data = {}
+    for e in client.fetchThreadMessages(messengerID,limit=10000):
+        try:
+            words = [x.lower() for x in e.text.split(" ")]
+            for word in words:
+                if word in data:
+                    data[word] = data[word]+1
+                else:
+                    data[word] = 1
+        except:
+            p = 1
+        
+    return sorted([(data[e],e) for e in data])[::-1]
 
-for i in range(0,min(len(temp),100)): print(str(temp[i][1]) + " " + str(temp[i][0]))
+email,password = inputCredentials()
+client = login(email, password)
 
-client.logout()
+ids = idList(client)
+while(True):
+    name = str(input("Enter Name \n"))
+    messengerID = int(ids[name])
+    
+    mostCommon = mostCommonWords(messengerID)
+    
+    file = open("MostCommonWords/" + name + ".txt",'w')
+    for i in range(min(len(mostCommon),100)):
+        try:
+            print(str(mostCommon[i][1]) + " " + str(mostCommon[i][0]))
+            file.write(str(mostCommon[i][1]) + " " + str(mostCommon[i][0]) + "\n")
+        except:
+            lol = 1
+    file.close()
+    print()
 
+logout(client)
